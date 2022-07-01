@@ -21,6 +21,10 @@ class RCTVoice {
             onSpeechPartialResults: () => { },
             onSpeechVolumeChanged: () => { },
         };
+        this._pauseForTimeoutID = null;
+        this.options = {
+            pauseFor: 2500,
+        };
     }
     removeAllListeners() {
         Voice.onSpeechStart = undefined;
@@ -50,10 +54,11 @@ class RCTVoice {
             });
         });
     }
-    start(locale, options = {}) {
+    start(locale, options) {
         if (!this._loaded && !this._listeners && voiceEmitter !== null) {
             this._listeners = Object.keys(this._events).map((key) => voiceEmitter.addListener(key, this._events[key]));
         }
+        this.options = Object.assign(Object.assign({}, this.options), options);
         return new Promise((resolve, reject) => {
             const callback = (error) => {
                 if (error) {
@@ -64,15 +69,15 @@ class RCTVoice {
                 }
             };
             if (react_native_1.Platform.OS === 'android') {
-                Voice.startSpeech(locale, callback, Object.assign({
+                Voice.startSpeech(locale, {
                     EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
                     EXTRA_MAX_RESULTS: 5,
                     EXTRA_PARTIAL_RESULTS: true,
                     REQUEST_PERMISSIONS_AUTO: true,
-                }, options));
+                }, callback);
             }
             else {
-                Voice.startSpeech(locale, callback);
+                Voice.startSpeech(locale, {}, callback);
             }
         });
     }
@@ -149,7 +154,15 @@ class RCTVoice {
         this._events.onSpeechResults = fn;
     }
     set onSpeechPartialResults(fn) {
-        this._events.onSpeechPartialResults = fn;
+        this._events.onSpeechPartialResults = (e) => {
+            if (this._pauseForTimeoutID !== null) {
+                clearTimeout(this._pauseForTimeoutID);
+            }
+            if (this.options.pauseFor > 0) {
+                this._pauseForTimeoutID = setTimeout(() => this.cancel(), this.options.pauseFor);
+            }
+            fn(e);
+        };
     }
     set onSpeechVolumeChanged(fn) {
         this._events.onSpeechVolumeChanged = fn;

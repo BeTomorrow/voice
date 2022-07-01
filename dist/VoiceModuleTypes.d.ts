@@ -7,7 +7,7 @@ export declare type VoiceModule = {
      */
     getSpeechRecognitionServices: () => Promise<string[]> | void;
     destroySpeech: (callback: Callback) => void;
-    startSpeech: (locale: string, callback: Callback, options?: Record<string, unknown>) => void;
+    startSpeech: (locale: string, options: Record<string, unknown>, callback: Callback) => void;
     stopSpeech: (callback: Callback) => void;
     cancelSpeech: (callback: Callback) => void;
     isRecognizing: (fn: (result: boolean) => void) => void;

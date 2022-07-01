@@ -23,10 +23,18 @@ const voiceEmitter =
   Platform.OS !== 'web' ? new NativeEventEmitter(Voice) : null;
 type SpeechEvent = keyof SpeechEvents;
 
+interface SpeechRecognizerOptions {
+  /**
+   * Stop recording after `pauseFor` (ms) duration of no words detection
+   */
+  pauseFor: number;
+}
 class RCTVoice {
   _loaded: boolean;
   _listeners: EmitterSubscription[] | null;
   _events: Required<SpeechEvents>;
+  options: SpeechRecognizerOptions;
+  _pauseForTimeoutID: NodeJS.Timeout | null;
 
   constructor() {
     this._loaded = false;
@@ -39,6 +47,10 @@ class RCTVoice {
       onSpeechResults: () => {},
       onSpeechPartialResults: () => {},
       onSpeechVolumeChanged: () => {},
+    };
+    this._pauseForTimeoutID = null;
+    this.options = {
+      pauseFor: 2500,
     };
   }
 
@@ -71,12 +83,13 @@ class RCTVoice {
     });
   }
 
-  start(locale: string) {
+  start(locale: string, options?: Partial<SpeechRecognizerOptions>) {
     if (!this._loaded && !this._listeners && voiceEmitter !== null) {
       this._listeners = (Object.keys(this._events) as SpeechEvent[]).map(
         (key: SpeechEvent) => voiceEmitter.addListener(key, this._events[key]),
       );
     }
+    this.options = { ...this.options, ...options };
 
     return new Promise<void>((resolve, reject) => {
       const callback = (error: string) => {
@@ -171,7 +184,10 @@ class RCTVoice {
     this._events.onSpeechRecognized = fn;
   }
   set onSpeechEnd(fn: (e: SpeechEndEvent) => void) {
-    this._events.onSpeechEnd = fn;
+    this._events.onSpeechEnd = (e: SpeechEndEvent) => {
+      this.clearAllTimeout();
+      fn(e);
+    };
   }
   set onSpeechError(fn: (e: SpeechErrorEvent) => void) {
     this._events.onSpeechError = fn;
@@ -180,10 +196,29 @@ class RCTVoice {
     this._events.onSpeechResults = fn;
   }
   set onSpeechPartialResults(fn: (e: SpeechResultsEvent) => void) {
-    this._events.onSpeechPartialResults = fn;
+    this._events.onSpeechPartialResults = (e: SpeechResultsEvent) => {
+      if (this._pauseForTimeoutID !== null) {
+        clearTimeout(this._pauseForTimeoutID);
+        this._pauseForTimeoutID = null;
+      }
+      if (this.options.pauseFor > 0) {
+        this._pauseForTimeoutID = setTimeout(
+          () => this.stop(),
+          this.options.pauseFor,
+        );
+      }
+      fn(e);
+    };
   }
   set onSpeechVolumeChanged(fn: (e: SpeechVolumeChangeEvent) => void) {
     this._events.onSpeechVolumeChanged = fn;
+  }
+
+  private clearAllTimeout() {
+    if (this._pauseForTimeoutID !== null) {
+      clearTimeout(this._pauseForTimeoutID);
+      this._pauseForTimeoutID = null;
+    }
   }
 }
 

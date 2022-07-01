@@ -1,13 +1,22 @@
+/// <reference types="node" />
 import { EmitterSubscription } from 'react-native';
 import { SpeechEndEvent, SpeechErrorEvent, SpeechEvents, SpeechRecognizedEvent, SpeechResultsEvent, SpeechStartEvent, SpeechVolumeChangeEvent } from './VoiceModuleTypes';
+interface SpeechRecognizerOptions {
+    /**
+     * Stop recording after `pauseFor` (ms) duration of no words detection
+     */
+    pauseFor: number;
+}
 declare class RCTVoice {
     _loaded: boolean;
     _listeners: EmitterSubscription[] | null;
     _events: Required<SpeechEvents>;
+    options: SpeechRecognizerOptions;
+    _pauseForTimeoutID: NodeJS.Timeout | null;
     constructor();
     removeAllListeners(): void;
     destroy(): Promise<void>;
-    start(locale: string, options?: {}): Promise<void>;
+    start(locale: string, options?: Partial<SpeechRecognizerOptions>): Promise<void>;
     stop(): Promise<void>;
     cancel(): Promise<void>;
     isAvailable(): Promise<boolean>;
