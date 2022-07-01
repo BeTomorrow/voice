@@ -6,7 +6,7 @@
     "lib": [
       "ES2016"
     ] /* Specify library files to be included in the compilation. */,
-    "jsx":"react",
+    "jsx": "react",
     "declaration": true /* Generates corresponding '.d.ts' file. */,
     "declarationMap": true /* Generates a sourcemap for each corresponding '.d.ts' file. */,
     /* Strict Type-Checking Options */

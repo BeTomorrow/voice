@@ -31,7 +31,6 @@ jobs:
           name: Check for Typings
           command: yarn type-check
 
-
   release:
     executor: rn/linux_js
     steps:
@@ -39,23 +38,23 @@ jobs:
           at: .
       - rn/yarn_install
       - run:
-            name: Publish to NPM
-            command: yarn semantic-release || true
+          name: Publish to NPM
+          command: yarn semantic-release || true
 
 workflows:
   ci:
     jobs:
-    - checkout_code
-    - analyse_js:
-        requires:
-        - checkout_code
-    - type_check:
-        requires:
-        - checkout_code
-    - release:
-        requires:
-        - analyse_js
-        - type_check
-        filters:
+      - checkout_code
+      - analyse_js:
+          requires:
+            - checkout_code
+      - type_check:
+          requires:
+            - checkout_code
+      - release:
+          requires:
+            - analyse_js
+            - type_check
+          filters:
             branches:
               only: master
