@@ -26,8 +26,18 @@ type SpeechEvent = keyof SpeechEvents;
 interface SpeechRecognizerOptions {
   /**
    * Stop recording after `pauseFor` (ms) duration of no words detection
+   * This is a maximum. System can stop recording before this timeout
+   * Set to 0 to disable.
+   * The default is `2500`
    */
   pauseFor: number;
+
+  /**
+   * Stop recording after `listenFor` (ms) duration
+   * This is a maximum. System can stop recording beforehand.
+   * The default is `0`
+   */
+  listenFor: number;
 }
 class RCTVoice {
   _loaded: boolean;
@@ -35,6 +45,7 @@ class RCTVoice {
   _events: Required<SpeechEvents>;
   options: SpeechRecognizerOptions;
   _pauseForTimeoutID: NodeJS.Timeout | null;
+  _listenForTimeoutID: NodeJS.Timeout | null;
 
   constructor() {
     this._loaded = false;
@@ -49,8 +60,10 @@ class RCTVoice {
       onSpeechVolumeChanged: () => {},
     };
     this._pauseForTimeoutID = null;
+    this._listenForTimeoutID = null;
     this.options = {
       pauseFor: 2500,
+      listenFor: 0,
     };
   }
 
@@ -120,6 +133,7 @@ class RCTVoice {
       return Promise.resolve();
     }
     return new Promise<void>((resolve, reject) => {
+      this.clearAllTimeout();
       Voice.stopSpeech((error) => {
         if (error) {
           reject(new Error(error));
@@ -177,7 +191,19 @@ class RCTVoice {
   }
 
   set onSpeechStart(fn: (e: SpeechStartEvent) => void) {
-    this._events.onSpeechStart = fn;
+    this._events.onSpeechStart = (e: SpeechStartEvent) => {
+      if (this._listenForTimeoutID !== null) {
+        clearTimeout(this._listenForTimeoutID);
+        this._listenForTimeoutID = null;
+      }
+      if (this.options.listenFor > 0) {
+        this._listenForTimeoutID = setTimeout(
+          () => this.stop(),
+          this.options.listenFor,
+        );
+      }
+      fn(e);
+    };
   }
 
   set onSpeechRecognized(fn: (e: SpeechRecognizedEvent) => void) {
@@ -190,7 +216,10 @@ class RCTVoice {
     };
   }
   set onSpeechError(fn: (e: SpeechErrorEvent) => void) {
-    this._events.onSpeechError = fn;
+    this._events.onSpeechError = (e: SpeechErrorEvent) => {
+      this.clearAllTimeout();
+      fn(e);
+    };
   }
   set onSpeechResults(fn: (e: SpeechResultsEvent) => void) {
     this._events.onSpeechResults = fn;
@@ -218,6 +247,10 @@ class RCTVoice {
     if (this._pauseForTimeoutID !== null) {
       clearTimeout(this._pauseForTimeoutID);
       this._pauseForTimeoutID = null;
+    }
+    if (this._listenForTimeoutID !== null) {
+      clearTimeout(this._listenForTimeoutID);
+      this._listenForTimeoutID = null;
     }
   }
 }

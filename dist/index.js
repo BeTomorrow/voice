@@ -22,8 +22,10 @@ class RCTVoice {
             onSpeechVolumeChanged: () => { },
         };
         this._pauseForTimeoutID = null;
+        this._listenForTimeoutID = null;
         this.options = {
             pauseFor: 2500,
+            listenFor: 0,
         };
     }
     removeAllListeners() {
@@ -139,16 +141,31 @@ class RCTVoice {
         });
     }
     set onSpeechStart(fn) {
-        this._events.onSpeechStart = fn;
+        this._events.onSpeechStart = (e) => {
+            if (this._listenForTimeoutID !== null) {
+                clearTimeout(this._listenForTimeoutID);
+                this._listenForTimeoutID = null;
+            }
+            if (this.options.listenFor > 0) {
+                this._listenForTimeoutID = setTimeout(() => this.stop(), this.options.listenFor);
+            }
+            fn(e);
+        };
     }
     set onSpeechRecognized(fn) {
         this._events.onSpeechRecognized = fn;
     }
     set onSpeechEnd(fn) {
-        this._events.onSpeechEnd = fn;
+        this._events.onSpeechEnd = (e) => {
+            this.clearAllTimeout();
+            fn(e);
+        };
     }
     set onSpeechError(fn) {
-        this._events.onSpeechError = fn;
+        this._events.onSpeechError = (e) => {
+            this.clearAllTimeout();
+            fn(e);
+        };
     }
     set onSpeechResults(fn) {
         this._events.onSpeechResults = fn;
@@ -157,15 +174,26 @@ class RCTVoice {
         this._events.onSpeechPartialResults = (e) => {
             if (this._pauseForTimeoutID !== null) {
                 clearTimeout(this._pauseForTimeoutID);
+                this._pauseForTimeoutID = null;
             }
             if (this.options.pauseFor > 0) {
-                this._pauseForTimeoutID = setTimeout(() => this.cancel(), this.options.pauseFor);
+                this._pauseForTimeoutID = setTimeout(() => this.stop(), this.options.pauseFor);
             }
             fn(e);
         };
     }
     set onSpeechVolumeChanged(fn) {
         this._events.onSpeechVolumeChanged = fn;
+    }
+    clearAllTimeout() {
+        if (this._pauseForTimeoutID !== null) {
+            clearTimeout(this._pauseForTimeoutID);
+            this._pauseForTimeoutID = null;
+        }
+        if (this._listenForTimeoutID !== null) {
+            clearTimeout(this._listenForTimeoutID);
+            this._listenForTimeoutID = null;
+        }
     }
 }
 exports.default = new RCTVoice();
