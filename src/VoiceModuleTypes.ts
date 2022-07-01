@@ -9,11 +9,17 @@ export type VoiceModule = {
    */
   getSpeechRecognitionServices: () => Promise<string[]> | void;
   destroySpeech: (callback: Callback) => void;
-  startSpeech: Function;
+  startSpeech: (
+    locale: string,
+    options: Record<string, unknown>,
+    callback: Callback,
+  ) => void;
   stopSpeech: (callback: Callback) => void;
   cancelSpeech: (callback: Callback) => void;
-  isRecognizing: Function;
-  isSpeechAvailable: Function;
+  isRecognizing: (fn: (result: boolean) => void) => void;
+  isSpeechAvailable: (
+    fn: (isAvailable: boolean, error: string) => void,
+  ) => void;
 } & SpeechEvents &
   EventSubscriptionVendor;
 

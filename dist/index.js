@@ -3,8 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const react_native_1 = require("react-native");
 const invariant_1 = __importDefault(require("invariant"));
+const react_native_1 = require("react-native");
 const Voice = react_native_1.NativeModules.Voice;
 // NativeEventEmitter is only availabe on React Native platforms, so this conditional is used to avoid import conflicts in the browser/server
 const voiceEmitter = react_native_1.Platform.OS !== 'web' ? new react_native_1.NativeEventEmitter(Voice) : null;
@@ -42,7 +42,7 @@ class RCTVoice {
                 }
                 else {
                     if (this._listeners) {
-                        this._listeners.map(listener => listener.remove());
+                        this._listeners.map((listener) => listener.remove());
                         this._listeners = null;
                     }
                     resolve();
@@ -64,12 +64,12 @@ class RCTVoice {
                 }
             };
             if (react_native_1.Platform.OS === 'android') {
-                Voice.startSpeech(locale, Object.assign({
+                Voice.startSpeech(locale, callback, Object.assign({
                     EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
                     EXTRA_MAX_RESULTS: 5,
                     EXTRA_PARTIAL_RESULTS: true,
                     REQUEST_PERMISSIONS_AUTO: true,
-                }, options), callback);
+                }, options));
             }
             else {
                 Voice.startSpeech(locale, callback);
@@ -81,7 +81,7 @@ class RCTVoice {
             return Promise.resolve();
         }
         return new Promise((resolve, reject) => {
-            Voice.stopSpeech(error => {
+            Voice.stopSpeech((error) => {
                 if (error) {
                     reject(new Error(error));
                 }
@@ -96,7 +96,7 @@ class RCTVoice {
             return Promise.resolve();
         }
         return new Promise((resolve, reject) => {
-            Voice.cancelSpeech(error => {
+            Voice.cancelSpeech((error) => {
                 if (error) {
                     reject(new Error(error));
                 }
@@ -129,7 +129,7 @@ class RCTVoice {
         return Voice.getSpeechRecognitionServices();
     }
     isRecognizing() {
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             Voice.isRecognizing((isRecognizing) => resolve(isRecognizing));
         });
     }

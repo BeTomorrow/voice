@@ -1,14 +1,19 @@
-import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
 import invariant from 'invariant';
 import {
-  VoiceModule,
+  EmitterSubscription,
+  NativeEventEmitter,
+  NativeModules,
+  Platform,
+} from 'react-native';
+import {
+  SpeechEndEvent,
+  SpeechErrorEvent,
   SpeechEvents,
   SpeechRecognizedEvent,
-  SpeechErrorEvent,
   SpeechResultsEvent,
   SpeechStartEvent,
-  SpeechEndEvent,
   SpeechVolumeChangeEvent,
+  VoiceModule,
 } from './VoiceModuleTypes';
 
 const Voice = NativeModules.Voice as VoiceModule;
@@ -20,7 +25,7 @@ type SpeechEvent = keyof SpeechEvents;
 
 class RCTVoice {
   _loaded: boolean;
-  _listeners: any[] | null;
+  _listeners: EmitterSubscription[] | null;
   _events: Required<SpeechEvents>;
 
   constructor() {
@@ -51,13 +56,13 @@ class RCTVoice {
     if (!this._loaded && !this._listeners) {
       return Promise.resolve();
     }
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       Voice.destroySpeech((error: string) => {
         if (error) {
           reject(new Error(error));
         } else {
           if (this._listeners) {
-            this._listeners.map(listener => listener.remove());
+            this._listeners.map((listener) => listener.remove());
             this._listeners = null;
           }
           resolve();
@@ -66,14 +71,14 @@ class RCTVoice {
     });
   }
 
-  start(locale: any, options = {}) {
+  start(locale: string) {
     if (!this._loaded && !this._listeners && voiceEmitter !== null) {
       this._listeners = (Object.keys(this._events) as SpeechEvent[]).map(
         (key: SpeechEvent) => voiceEmitter.addListener(key, this._events[key]),
       );
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const callback = (error: string) => {
         if (error) {
           reject(new Error(error));
@@ -84,19 +89,16 @@ class RCTVoice {
       if (Platform.OS === 'android') {
         Voice.startSpeech(
           locale,
-          Object.assign(
-            {
-              EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
-              EXTRA_MAX_RESULTS: 5,
-              EXTRA_PARTIAL_RESULTS: true,
-              REQUEST_PERMISSIONS_AUTO: true,
-            },
-            options,
-          ),
+          {
+            EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
+            EXTRA_MAX_RESULTS: 5,
+            EXTRA_PARTIAL_RESULTS: true,
+            REQUEST_PERMISSIONS_AUTO: true,
+          },
           callback,
         );
       } else {
-        Voice.startSpeech(locale, callback);
+        Voice.startSpeech(locale, {}, callback);
       }
     });
   }
@@ -104,8 +106,8 @@ class RCTVoice {
     if (!this._loaded && !this._listeners) {
       return Promise.resolve();
     }
-    return new Promise((resolve, reject) => {
-      Voice.stopSpeech(error => {
+    return new Promise<void>((resolve, reject) => {
+      Voice.stopSpeech((error) => {
         if (error) {
           reject(new Error(error));
         } else {
@@ -118,8 +120,8 @@ class RCTVoice {
     if (!this._loaded && !this._listeners) {
       return Promise.resolve();
     }
-    return new Promise((resolve, reject) => {
-      Voice.cancelSpeech(error => {
+    return new Promise<void>((resolve, reject) => {
+      Voice.cancelSpeech((error) => {
         if (error) {
           reject(new Error(error));
         } else {
@@ -128,9 +130,9 @@ class RCTVoice {
       });
     });
   }
-  isAvailable(): Promise<0 | 1> {
+  isAvailable(): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      Voice.isSpeechAvailable((isAvailable: 0 | 1, error: string) => {
+      Voice.isSpeechAvailable((isAvailable: boolean, error: string) => {
         if (error) {
           reject(new Error(error));
         } else {
@@ -155,9 +157,9 @@ class RCTVoice {
     return Voice.getSpeechRecognitionServices();
   }
 
-  isRecognizing(): Promise<0 | 1> {
-    return new Promise(resolve => {
-      Voice.isRecognizing((isRecognizing: 0 | 1) => resolve(isRecognizing));
+  isRecognizing(): Promise<boolean> {
+    return new Promise((resolve) => {
+      Voice.isRecognizing((isRecognizing: boolean) => resolve(isRecognizing));
     });
   }
 
