@@ -46,6 +46,7 @@ class RCTVoice {
   options: SpeechRecognizerOptions;
   _pauseForTimeoutID: NodeJS.Timeout | null;
   _listenForTimeoutID: NodeJS.Timeout | null;
+  _preventNextResult = false;
 
   constructor() {
     this._loaded = false;
@@ -222,7 +223,13 @@ class RCTVoice {
     };
   }
   set onSpeechResults(fn: (e: SpeechResultsEvent) => void) {
-    this._events.onSpeechResults = fn;
+    this._events.onSpeechResults = (e: SpeechResultsEvent) => {
+      if (this._preventNextResult) {
+        this._preventNextResult = false;
+        return;
+      }
+      fn(e);
+    };
   }
   set onSpeechPartialResults(fn: (e: SpeechResultsEvent) => void) {
     this._events.onSpeechPartialResults = (e: SpeechResultsEvent) => {
@@ -232,7 +239,7 @@ class RCTVoice {
       }
       if (this.options.pauseFor > 0) {
         this._pauseForTimeoutID = setTimeout(
-          () => this.stop(),
+          () => this.stopAndPreventNextResultiOS(),
           this.options.pauseFor,
         );
       }
@@ -242,6 +249,17 @@ class RCTVoice {
   set onSpeechVolumeChanged(fn: (e: SpeechVolumeChangeEvent) => void) {
     this._events.onSpeechVolumeChanged = fn;
   }
+
+  /**
+   * After stop(); iOS send again the last detection
+   * Prevent dispatching twice the result after ending with pauseFor timeout
+   */
+  private stopAndPreventNextResultiOS = () => {
+    if (Platform.OS === 'ios') {
+      this._preventNextResult = true;
+    }
+    this.stop();
+  };
 
   private clearAllTimeout() {
     if (this._pauseForTimeoutID !== null) {
