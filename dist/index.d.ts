@@ -23,6 +23,7 @@ declare class RCTVoice {
     options: SpeechRecognizerOptions;
     _pauseForTimeoutID: NodeJS.Timeout | null;
     _listenForTimeoutID: NodeJS.Timeout | null;
+    _preventNextResult: boolean;
     constructor();
     removeAllListeners(): void;
     destroy(): Promise<void>;
@@ -42,6 +43,11 @@ declare class RCTVoice {
     set onSpeechResults(fn: (e: SpeechResultsEvent) => void);
     set onSpeechPartialResults(fn: (e: SpeechResultsEvent) => void);
     set onSpeechVolumeChanged(fn: (e: SpeechVolumeChangeEvent) => void);
+    /**
+     * After stop(); iOS send again the last detection
+     * Prevent dispatching twice the result after ending with pauseFor timeout
+     */
+    private stopAndPreventNextResultiOS;
     private clearAllTimeout;
 }
 export { SpeechEndEvent, SpeechErrorEvent, SpeechEvents, SpeechStartEvent, SpeechRecognizedEvent, SpeechResultsEvent, SpeechVolumeChangeEvent, };

@@ -10,6 +10,17 @@ const Voice = react_native_1.NativeModules.Voice;
 const voiceEmitter = react_native_1.Platform.OS !== 'web' ? new react_native_1.NativeEventEmitter(Voice) : null;
 class RCTVoice {
     constructor() {
+        this._preventNextResult = false;
+        /**
+         * After stop(); iOS send again the last detection
+         * Prevent dispatching twice the result after ending with pauseFor timeout
+         */
+        this.stopAndPreventNextResultiOS = () => {
+            if (react_native_1.Platform.OS === 'ios') {
+                this._preventNextResult = true;
+            }
+            this.stop();
+        };
         this._loaded = false;
         this._listeners = null;
         this._events = {
@@ -88,6 +99,7 @@ class RCTVoice {
             return Promise.resolve();
         }
         return new Promise((resolve, reject) => {
+            this.clearAllTimeout();
             Voice.stopSpeech((error) => {
                 if (error) {
                     reject(new Error(error));
@@ -168,7 +180,13 @@ class RCTVoice {
         };
     }
     set onSpeechResults(fn) {
-        this._events.onSpeechResults = fn;
+        this._events.onSpeechResults = (e) => {
+            if (this._preventNextResult) {
+                this._preventNextResult = false;
+                return;
+            }
+            fn(e);
+        };
     }
     set onSpeechPartialResults(fn) {
         this._events.onSpeechPartialResults = (e) => {
@@ -177,7 +195,7 @@ class RCTVoice {
                 this._pauseForTimeoutID = null;
             }
             if (this.options.pauseFor > 0) {
-                this._pauseForTimeoutID = setTimeout(() => this.stop(), this.options.pauseFor);
+                this._pauseForTimeoutID = setTimeout(() => this.stopAndPreventNextResultiOS(), this.options.pauseFor);
             }
             fn(e);
         };
