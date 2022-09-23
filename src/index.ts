@@ -2,6 +2,7 @@ import invariant from 'invariant';
 import {
   EmitterSubscription,
   NativeEventEmitter,
+  NativeModule,
   NativeModules,
   Platform,
 } from 'react-native';
@@ -20,7 +21,9 @@ const Voice = NativeModules.Voice as VoiceModule;
 
 // NativeEventEmitter is only availabe on React Native platforms, so this conditional is used to avoid import conflicts in the browser/server
 const voiceEmitter =
-  Platform.OS !== 'web' ? new NativeEventEmitter(Voice) : null;
+  Platform.OS !== 'web'
+    ? new NativeEventEmitter(Voice as unknown as NativeModule)
+    : null;
 type SpeechEvent = keyof SpeechEvents;
 
 interface SpeechRecognizerOptions {
@@ -83,6 +86,7 @@ class RCTVoice {
       return Promise.resolve();
     }
     return new Promise<void>((resolve, reject) => {
+      this.clearAllTimeout();
       Voice.destroySpeech((error: string) => {
         if (error) {
           reject(new Error(error));
@@ -149,6 +153,7 @@ class RCTVoice {
       return Promise.resolve();
     }
     return new Promise<void>((resolve, reject) => {
+      this.clearAllTimeout();
       Voice.cancelSpeech((error) => {
         if (error) {
           reject(new Error(error));
