@@ -1,4 +1,4 @@
-#import "Voice.h"
+#import "VoiceModule.h"
 #import <React/RCTLog.h>
 #import <UIKit/UIKit.h>
 #import <React/RCTUtils.h>
@@ -7,7 +7,7 @@
 #import <Accelerate/Accelerate.h>
 
 
-@interface Voice () <SFSpeechRecognizerDelegate>
+@interface VoiceModule () <SFSpeechRecognizerDelegate>
 
 @property (nonatomic) SFSpeechRecognizer* speechRecognizer;
 @property (nonatomic) SFSpeechAudioBufferRecognitionRequest* recognitionRequest;
@@ -27,7 +27,7 @@
 
 @end
 
-@implementation Voice
+@implementation VoiceModule
 {
 }
 

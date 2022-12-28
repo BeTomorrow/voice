@@ -2,6 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:Voice.xcodeproj">
+      location = "self:VoiceModule.xcodeproj">
    </FileRef>
 </Workspace>
