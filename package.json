@@ -1,44 +1,44 @@
 {
-  "name": "@betomorrow/voice",
-  "description": "React Native Native Voice library for iOS and Android",
-  "version": "3.2.2",
-  "author": "Sam Wenke <samwenke@gmail.com>",
-  "private": false,
-  "homepage": "https://github.com/react-native-voice/voice",
-  "devDependencies": {
-    "@types/invariant": "^2.2.35",
-    "@types/react-native": "0.67.9",
-    "@typescript-eslint/eslint-plugin": "^5.38.0",
-    "@typescript-eslint/parser": "^5.38.0",
-    "@typescript-eslint/typescript-estree": "^5.30.0",
-    "eslint": "^8.18.0",
-    "lint-staged": "^7.3.0",
-    "prettier": "^2.8.1",
-    "react": "18.1.0",
-    "react-native": "^0.70.6",
-    "typescript": "3.8.3"
-  },
-  "keywords": [
-    "android",
-    "ios",
-    "react-native",
-    "speech",
-    "voice"
-  ],
-  "license": "MIT",
-  "main": "src/index.ts",
-  "peerDependencies": {
-    "react-native": ">= 0.60.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/react-native-voice/voice.git"
-  },
-  "scripts": {
-    "lint": "eslint src/*",
-    "type-check": "tsc -noEmit"
-  },
-  "dependencies": {
-    "invariant": "^2.2.4"
-  }
+	"name": "@betomorrow/voice",
+	"description": "React Native Native Voice library for iOS and Android",
+	"version": "3.2.2",
+	"author": "Sam Wenke <samwenke@gmail.com>",
+	"private": false,
+	"homepage": "https://github.com/react-native-voice/voice",
+	"devDependencies": {
+		"@types/invariant": "^2.2.35",
+		"@types/react-native": "0.67.9",
+		"@typescript-eslint/eslint-plugin": "^5.38.0",
+		"@typescript-eslint/parser": "^5.38.0",
+		"@typescript-eslint/typescript-estree": "^5.30.0",
+		"eslint": "^8.18.0",
+		"lint-staged": "^7.3.0",
+		"prettier": "^2.8.1",
+		"react": "18.1.0",
+		"react-native": "^0.70.6",
+		"typescript": "3.8.3"
+	},
+	"keywords": [
+		"android",
+		"ios",
+		"react-native",
+		"speech",
+		"voice"
+	],
+	"license": "MIT",
+	"main": "src/index.ts",
+	"peerDependencies": {
+		"react-native": ">= 0.60.2"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/react-native-voice/voice.git"
+	},
+	"scripts": {
+		"lint": "eslint src/*",
+		"type-check": "tsc -noEmit"
+	},
+	"dependencies": {
+		"invariant": "^2.2.4"
+	}
 }
