@@ -14,17 +14,9 @@ import {
   SpeechResultsEvent,
   SpeechStartEvent,
   SpeechVolumeChangeEvent,
+  VoiceEventType,
   VoiceModule,
 } from './VoiceModuleTypes';
-
-const Voice = NativeModules.Voice as VoiceModule;
-
-// NativeEventEmitter is only availabe on React Native platforms, so this conditional is used to avoid import conflicts in the browser/server
-const voiceEmitter =
-  Platform.OS !== 'web'
-    ? new NativeEventEmitter(Voice as unknown as NativeModule)
-    : null;
-type SpeechEvent = keyof SpeechEvents;
 
 interface SpeechRecognizerOptions {
   /**
@@ -44,25 +36,16 @@ interface SpeechRecognizerOptions {
 }
 class RCTVoice {
   _loaded: boolean;
-  _listeners: EmitterSubscription[] | null;
-  _events: Required<SpeechEvents>;
   options: SpeechRecognizerOptions;
   _pauseForTimeoutID: NodeJS.Timeout | null;
   _listenForTimeoutID: NodeJS.Timeout | null;
   _preventNextResult = false;
+  private Voice = NativeModules.VoiceModule as VoiceModule & NativeModule;
+  private _voiceEmitter: NativeEventEmitter | null =
+    Platform.OS !== 'web' ? new NativeEventEmitter(this.Voice) : null;
 
   constructor() {
     this._loaded = false;
-    this._listeners = null;
-    this._events = {
-      onSpeechStart: () => {},
-      onSpeechRecognized: () => {},
-      onSpeechEnd: () => {},
-      onSpeechError: () => {},
-      onSpeechResults: () => {},
-      onSpeechPartialResults: () => {},
-      onSpeechVolumeChanged: () => {},
-    };
     this._pauseForTimeoutID = null;
     this._listenForTimeoutID = null;
     this.options = {
@@ -71,30 +54,16 @@ class RCTVoice {
     };
   }
 
-  removeAllListeners() {
-    Voice.onSpeechStart = undefined;
-    Voice.onSpeechRecognized = undefined;
-    Voice.onSpeechEnd = undefined;
-    Voice.onSpeechError = undefined;
-    Voice.onSpeechResults = undefined;
-    Voice.onSpeechPartialResults = undefined;
-    Voice.onSpeechVolumeChanged = undefined;
-  }
-
   destroy() {
-    if (!this._loaded && !this._listeners) {
+    if (!this._loaded) {
       return Promise.resolve();
     }
     return new Promise<void>((resolve, reject) => {
       this.clearAllTimeout();
-      Voice.destroySpeech((error: string) => {
+      this.Voice.destroySpeech((error: string) => {
         if (error) {
           reject(new Error(error));
         } else {
-          if (this._listeners) {
-            this._listeners.map((listener) => listener.remove());
-            this._listeners = null;
-          }
           resolve();
         }
       });
@@ -102,11 +71,6 @@ class RCTVoice {
   }
 
   start(locale: string, options?: Partial<SpeechRecognizerOptions>) {
-    if (!this._loaded && !this._listeners && voiceEmitter !== null) {
-      this._listeners = (Object.keys(this._events) as SpeechEvent[]).map(
-        (key: SpeechEvent) => voiceEmitter.addListener(key, this._events[key]),
-      );
-    }
     this.options = { ...this.options, ...options };
 
     return new Promise<void>((resolve, reject) => {
@@ -118,7 +82,7 @@ class RCTVoice {
         }
       };
       if (Platform.OS === 'android') {
-        Voice.startSpeech(
+        this.Voice.startSpeech(
           locale,
           {
             EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
@@ -129,17 +93,14 @@ class RCTVoice {
           callback,
         );
       } else {
-        Voice.startSpeech(locale, {}, callback);
+        this.Voice.startSpeech(locale, {}, callback);
       }
     });
   }
   stop() {
-    if (!this._loaded && !this._listeners) {
-      return Promise.resolve();
-    }
     return new Promise<void>((resolve, reject) => {
       this.clearAllTimeout();
-      Voice.stopSpeech((error) => {
+      this.Voice.stopSpeech((error) => {
         if (error) {
           reject(new Error(error));
         } else {
@@ -149,12 +110,9 @@ class RCTVoice {
     });
   }
   cancel() {
-    if (!this._loaded && !this._listeners) {
-      return Promise.resolve();
-    }
     return new Promise<void>((resolve, reject) => {
       this.clearAllTimeout();
-      Voice.cancelSpeech((error) => {
+      this.Voice.cancelSpeech((error) => {
         if (error) {
           reject(new Error(error));
         } else {
@@ -165,7 +123,7 @@ class RCTVoice {
   }
   isAvailable(): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      Voice.isSpeechAvailable((isAvailable: boolean, error: string) => {
+      this.Voice.isSpeechAvailable((isAvailable: boolean, error: string) => {
         if (error) {
           reject(new Error(error));
         } else {
@@ -181,78 +139,115 @@ class RCTVoice {
   getSpeechRecognitionServices() {
     if (Platform.OS !== 'android') {
       invariant(
-        Voice,
+        this.Voice,
         'Speech recognition services can be queried for only on Android',
       );
       return;
     }
 
-    return Voice.getSpeechRecognitionServices();
+    return this.Voice.getSpeechRecognitionServices();
   }
 
   isRecognizing(): Promise<boolean> {
     return new Promise((resolve) => {
-      Voice.isRecognizing((isRecognizing: boolean) => resolve(isRecognizing));
+      this.Voice.isRecognizing((isRecognizing: boolean) =>
+        resolve(isRecognizing),
+      );
     });
   }
 
-  set onSpeechStart(fn: (e: SpeechStartEvent) => void) {
-    this._events.onSpeechStart = (e: SpeechStartEvent) => {
-      if (this._listenForTimeoutID !== null) {
-        clearTimeout(this._listenForTimeoutID);
-        this._listenForTimeoutID = null;
-      }
-      if (this.options.listenFor > 0) {
-        this._listenForTimeoutID = setTimeout(
-          () => this.stop(),
-          this.options.listenFor,
-        );
-      }
-      fn(e);
-    };
+  onSpeechStart(fn: (e: SpeechStartEvent) => void): EmitterSubscription {
+    return this.addListenerToEvent(
+      VoiceEventType.onSpeechStart,
+      (e: SpeechStartEvent) => {
+        if (this._listenForTimeoutID !== null) {
+          clearTimeout(this._listenForTimeoutID);
+          this._listenForTimeoutID = null;
+        }
+        if (this.options.listenFor > 0) {
+          this._listenForTimeoutID = setTimeout(
+            () => this.stop(),
+            this.options.listenFor,
+          );
+        }
+        fn(e);
+      },
+    );
   }
 
-  set onSpeechRecognized(fn: (e: SpeechRecognizedEvent) => void) {
-    this._events.onSpeechRecognized = fn;
+  onSpeechRecognized(
+    fn: (e: SpeechRecognizedEvent) => void,
+  ): EmitterSubscription {
+    return this.addListenerToEvent(VoiceEventType.onSpeechRecognized, (e) =>
+      fn(e),
+    );
   }
-  set onSpeechEnd(fn: (e: SpeechEndEvent) => void) {
-    this._events.onSpeechEnd = (e: SpeechEndEvent) => {
-      this.clearAllTimeout();
-      fn(e);
-    };
+
+  onSpeechEnd(fn: (e: SpeechEndEvent) => void): EmitterSubscription {
+    return this.addListenerToEvent(
+      VoiceEventType.onSpeechEnd,
+      (e: SpeechEndEvent) => {
+        this.clearAllTimeout();
+        fn(e);
+      },
+    );
   }
-  set onSpeechError(fn: (e: SpeechErrorEvent) => void) {
-    this._events.onSpeechError = (e: SpeechErrorEvent) => {
-      this.clearAllTimeout();
-      fn(e);
-    };
+  onSpeechError(fn: (e: SpeechErrorEvent) => void): EmitterSubscription {
+    return this.addListenerToEvent(
+      VoiceEventType.onSpeechError,
+      (e: SpeechErrorEvent) => {
+        this.clearAllTimeout();
+        fn(e);
+      },
+    );
   }
-  set onSpeechResults(fn: (e: SpeechResultsEvent) => void) {
-    this._events.onSpeechResults = (e: SpeechResultsEvent) => {
-      if (this._preventNextResult) {
-        this._preventNextResult = false;
-        return;
-      }
-      fn(e);
-    };
+  onSpeechResults(fn: (e: SpeechResultsEvent) => void): EmitterSubscription {
+    return this.addListenerToEvent(
+      VoiceEventType.onSpeechResults,
+      (e: SpeechResultsEvent) => {
+        if (this._preventNextResult) {
+          this._preventNextResult = false;
+          return;
+        }
+        fn(e);
+      },
+    );
   }
-  set onSpeechPartialResults(fn: (e: SpeechResultsEvent) => void) {
-    this._events.onSpeechPartialResults = (e: SpeechResultsEvent) => {
-      if (this._pauseForTimeoutID !== null) {
-        clearTimeout(this._pauseForTimeoutID);
-        this._pauseForTimeoutID = null;
-      }
-      if (this.options.pauseFor > 0) {
-        this._pauseForTimeoutID = setTimeout(
-          () => this.stopAndPreventNextResultiOS(),
-          this.options.pauseFor,
-        );
-      }
-      fn(e);
-    };
+  onSpeechPartialResults(
+    fn: (e: SpeechResultsEvent) => void,
+  ): EmitterSubscription {
+    return this.addListenerToEvent(
+      VoiceEventType.onSpeechPartialResults,
+      (e: SpeechResultsEvent) => {
+        if (this._pauseForTimeoutID !== null) {
+          clearTimeout(this._pauseForTimeoutID);
+          this._pauseForTimeoutID = null;
+        }
+        if (this.options.pauseFor > 0) {
+          this._pauseForTimeoutID = setTimeout(
+            () => this.stopAndPreventNextResultiOS(),
+            this.options.pauseFor,
+          );
+        }
+        fn(e);
+      },
+    );
   }
-  set onSpeechVolumeChanged(fn: (e: SpeechVolumeChangeEvent) => void) {
-    this._events.onSpeechVolumeChanged = fn;
+  onSpeechVolumeChanged(fn: (e: SpeechVolumeChangeEvent) => void) {
+    return this.addListenerToEvent(VoiceEventType.onSpeechVolumeChanged, (e) =>
+      fn(e),
+    );
+  }
+
+  private addListenerToEvent(
+    type: VoiceEventType,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    listener: (event: any) => void,
+  ): EmitterSubscription {
+    if (this._voiceEmitter === null) {
+      throw new Error('Voice Emitter is not defined');
+    }
+    return this._voiceEmitter.addListener(type, listener);
   }
 
   /**
@@ -261,6 +256,7 @@ class RCTVoice {
    */
   private stopAndPreventNextResultiOS = () => {
     if (Platform.OS === 'ios') {
+      console.log('stopAndPreventNextResultiOS');
       this._preventNextResult = true;
     }
     this.stop();
@@ -287,4 +283,4 @@ export {
   SpeechResultsEvent,
   SpeechVolumeChangeEvent,
 };
-export default new RCTVoice();
+export const Voice = new RCTVoice();

@@ -59,3 +59,14 @@ export type SpeechEndEvent = {
 export type SpeechVolumeChangeEvent = {
   value?: number;
 };
+
+export enum VoiceEventType {
+  onSpeechStart = 'onSpeechStart',
+  onSpeechRecognized = 'onSpeechRecognized',
+  onSpeechError = 'onSpeechError',
+  onSpeechEnd = 'onSpeechEnd',
+  onPartialResults = 'onPartialResults',
+  onSpeechResults = 'onSpeechResults',
+  onSpeechVolumeChanged = 'onSpeechVolumeChanged',
+  onSpeechPartialResults = 'onSpeechPartialResults',
+}

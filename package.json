@@ -1,5 +1,5 @@
 {
-  "name": "@react-native-voice/voice",
+  "name": "@betomorrow/voice",
   "description": "React Native Native Voice library for iOS and Android",
   "version": "3.2.2",
   "author": "Sam Wenke <samwenke@gmail.com>",
@@ -13,9 +13,9 @@
     "@typescript-eslint/typescript-estree": "^5.30.0",
     "eslint": "^8.18.0",
     "lint-staged": "^7.3.0",
-    "prettier": "^2.7.1",
-    "react": "16.4.2",
-    "react-native": "^0.68.2",
+    "prettier": "^2.8.1",
+    "react": "18.1.0",
+    "react-native": "^0.70.6",
     "typescript": "3.8.3"
   },
   "keywords": [
